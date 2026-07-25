@@ -33,7 +33,7 @@ def create_vectorstore(chunks):
 def load_vector_store():
 
     vector_store = Chroma(
-        embedding_= get_embedding_model(),
+        embedding_function = get_embedding_model(),
         persist_directory= PERSIST_DIRECTORY
     )
 
