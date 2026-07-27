@@ -11,7 +11,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 PERSIST_DIRECTORY = str(BASE_DIR / "data" / "chroma")
-EMBEDDING_MODEL = "gemini-embedding-2-preview"
+EMBEDDING_MODEL = "gemini-embedding-2"
 
 def get_embedding_model():
     return GoogleGenerativeAIEmbeddings(
