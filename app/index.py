@@ -2,7 +2,12 @@ from app.loader import load_documents
 from app.splitter import split_documents
 from app.vectorstore import create_vectorstore
 
-urls = ["https://docs.freeclimb.com/reference/using-the-api"]
+urls = [
+    "https://docs.freeclimb.com/reference/using-the-api.md",
+    "https://docs.freeclimb.com/reference/account.md",
+    "https://docs.freeclimb.com/reference/get-an-account.md",
+    "https://docs.freeclimb.com/reference/manage-an-account.md"
+]
 
 documents = load_documents(urls)
 
