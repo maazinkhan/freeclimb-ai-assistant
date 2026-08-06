@@ -14,12 +14,15 @@ llm = ChatGoogleGenerativeAI(
 
 prompt = ChatPromptTemplate.from_template(
         """
-    You are a helpful AI assistant.
+    Answer using the provided context.
 
-    Answer ONLY using the provided context.
-
-    If the answer cannot be found in the context,
-    say you don't know.
+    If the context contains an endpoint definition but no language-specific
+    code sample, you may generate a concise example from the documented
+    HTTP method, URL, parameters, and authentication.
+    
+    Clearly label it as a generated example.
+    
+    Do not invent undocumented endpoint details.
 
     Context:
     {context}
