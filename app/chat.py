@@ -40,6 +40,15 @@ def ask(question):
         doc.page_content for doc in docs
     )
 
+    sources = []
+    seen = set()
+
+    for doc in docs:
+        url = doc.metadata["source"].replace(".md", "")
+
+        if url not in seen:
+            sources.append(url)
+            seen.add(url)
 
 
     message = prompt.invoke(
@@ -52,7 +61,12 @@ def ask(question):
 
     response = llm.invoke(message)
 
-    return response.content
+    answer = {
+        "answer":response.content,
+        "sources":sources
+    }
+
+    return answer
 
 
 

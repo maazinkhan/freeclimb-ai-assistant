@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+from pydantic_settings import sources
 
 st.title("🤖 FreeClimb AI Assistant")
 st.write("Ask anything about the FreeClimb documentation.")
@@ -14,5 +15,11 @@ if st.button("Ask"):
         )
 
         answer = response.json()["answer"]
+        sources =response.json()["sources"]
 
     st.write(answer)
+
+    st.subheader("Sources")
+
+    for source in sources:
+        st.markdown(f"- [{source}]({source})")
