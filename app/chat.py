@@ -48,12 +48,16 @@ prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
+# Store conversation history per session so different users
+# do not share the same chat context.
 histories = {}
 
 def ask(question, session_id):
     if session_id not in histories:
         histories[session_id] = []
 
+    # Keep the current question separate from history.
+    # It is appended only after the LLM responds to avoid sending it twice.
     history = histories[session_id]
 
     docs = retriever.invoke(question)
@@ -80,6 +84,8 @@ def ask(question, session_id):
         }
     )
 
+    # Keep the full streamed answer so it can be saved
+    # as one AIMessage in conversation history.
     full_response = ""
 
     for chunk in llm.stream(message):
@@ -94,6 +100,8 @@ def ask(question, session_id):
         AIMessage(content=full_response)
     )
 
+    # Marker separates streamed answer text from source metadata.
+    # Later this can be replaced with structured SSE/JSON events.
     yield "\n__SOURCES__\n"
     yield "\n".join(sources)
 

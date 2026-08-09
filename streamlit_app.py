@@ -9,7 +9,7 @@ st.write("Ask anything about the FreeClimb documentation.")
 question = st.text_input("Ask a question")
 
 if st.button("Ask"):
-
+    # Persist one ID across Streamlit reruns for this conversation.
     if "session_id" not in st.session_state:
         st.session_state["session_id"] = str(uuid.uuid4())
 
