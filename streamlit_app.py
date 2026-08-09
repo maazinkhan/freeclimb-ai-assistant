@@ -21,13 +21,38 @@ if st.button("Ask"):
             json={
                 "question": question,
                 "session_id": session_id
-            }
+            },
+            stream=True
         )
 
-        answer = response.json()["answer"]
-        sources =response.json()["sources"]
+    placeholder = st.empty()
 
-    st.write(answer)
+    full_stream = ""
+
+    for chunk in response.iter_content(
+            chunk_size=None,
+            decode_unicode=True
+    ):
+        if chunk:
+            full_stream += chunk
+
+            if "__SOURCES__" not in full_stream:
+                placeholder.markdown(full_stream)
+
+    answer_text, sources_text = full_stream.split(
+        "__SOURCES__",
+        1
+    )
+
+    placeholder.markdown(answer_text.strip())
+
+    sources = [
+        source.strip()
+        for source in sources_text.split("\n")
+        if source.strip()
+    ]
+
+
 
     st.subheader("Sources")
 

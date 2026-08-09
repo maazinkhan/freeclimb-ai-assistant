@@ -80,22 +80,23 @@ def ask(question, session_id):
         }
     )
 
-    response = llm.invoke(message)
+    full_response = ""
+
+    for chunk in llm.stream(message):
+        full_response += chunk.content
+        yield chunk.content
 
     history.append(
         HumanMessage(content=question)
     )
 
     history.append(
-        AIMessage(content=response.content)
+        AIMessage(content=full_response)
     )
 
-    answer = {
-        "answer":response.content,
-        "sources":sources
-    }
+    yield "\n__SOURCES__\n"
+    yield "\n".join(sources)
 
-    return answer
 
 
 
