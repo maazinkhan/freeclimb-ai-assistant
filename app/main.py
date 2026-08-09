@@ -1,9 +1,11 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from app.chat import ask
+from uuid import UUID
 
 class ChatRequest(BaseModel):
     question: str
+    session_id: UUID
 
 app = FastAPI()
 
@@ -13,5 +15,8 @@ def root():
 
 @app.post("/chat")
 def chat(request: ChatRequest):
-    result = ask(question=request.question)
+    result = ask(
+        question=request.question,
+        session_id=request.session_id
+    )
     return result
