@@ -18,6 +18,8 @@ llm = ChatGoogleGenerativeAI(
 # do not share the same chat context.
 histories = {}
 
+chain = prompt | llm
+
 def ask(question, session_id):
     if session_id not in histories:
         histories[session_id] = []
@@ -42,19 +44,18 @@ def ask(question, session_id):
             sources.append(url)
             seen.add(url)
 
-    message = prompt.invoke(
-        {
-            "history": history,
-            "context": context,
-            "question": question
-        }
-    )
 
     # Keep the full streamed answer so it can be saved
     # as one AIMessage in conversation history.
     full_response = ""
 
-    for chunk in llm.stream(message):
+    for chunk in chain.stream(
+            {
+                "history": history,
+                "context": context,
+                "question": question
+            }
+    ):
         full_response += chunk.content
         yield chunk.content
 
