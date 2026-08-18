@@ -3,6 +3,7 @@ from app.retriever import create_retriever
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage
 from app.prompts import prompt
+from langchain_core.output_parsers import StrOutputParser
 
 vector_store = load_vector_store()
 
@@ -18,7 +19,7 @@ llm = ChatGoogleGenerativeAI(
 # do not share the same chat context.
 histories = {}
 
-chain = prompt | llm
+chain = prompt | llm |  StrOutputParser()
 
 def ask(question, session_id):
     if session_id not in histories:
@@ -56,8 +57,9 @@ def ask(question, session_id):
                 "question": question
             }
     ):
-        full_response += chunk.content
-        yield chunk.content
+        full_response += chunk
+        yield chunk
+
 
     history.append(
         HumanMessage(content=question)
