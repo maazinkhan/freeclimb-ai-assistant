@@ -4,7 +4,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage
 from app.prompts import prompt
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough,RunnableParallel
 
 vector_store = load_vector_store()
 
@@ -31,6 +31,12 @@ def format_docs(docs):
 format_docs_runnable = RunnableLambda(format_docs) 
 
 retrieval_chain = retriever | format_docs_runnable
+
+
+rag_inputs = RunnableParallel(
+    context=retrieval_chain,
+    question=RunnablePassthrough(),
+)
 
 def ask(question, session_id):
     if session_id not in histories:
@@ -96,5 +102,3 @@ if __name__ == "__main__":
         answer = ask(question, session_id="test-session")
         print("\nAnswer:")
         print(answer)
-
-
