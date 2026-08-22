@@ -48,7 +48,8 @@ def ask(question, session_id):
 
     docs = retriever.invoke(question) 
 
-    context = format_docs_runnable.invoke(docs) 
+    result = rag_inputs.invoke(question)
+    result["history"] = history 
 
     sources = []
     seen = set()
@@ -65,13 +66,7 @@ def ask(question, session_id):
     # as one AIMessage in conversation history.
     full_response = ""
 
-    for chunk in chain.stream(
-            {
-                "history": history,
-                "context": context,
-                "question": question
-            }
-    ):
+    for chunk in chain.stream(result):
         full_response += chunk
         yield chunk
 
