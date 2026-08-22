@@ -4,6 +4,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage
 from app.prompts import prompt
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableLambda
 
 vector_store = load_vector_store()
 
@@ -21,6 +22,16 @@ histories = {}
 
 chain = prompt | llm |  StrOutputParser()
 
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
+
+# RunnableLambda is used to format the documents as a string.
+
+format_docs_runnable = RunnableLambda(format_docs) 
+
+retrieval_chain = retriever | format_docs_runnable
+
 def ask(question, session_id):
     if session_id not in histories:
         histories[session_id] = []
@@ -29,11 +40,9 @@ def ask(question, session_id):
     # It is appended only after the LLM responds to avoid sending it twice.
     history = histories[session_id]
 
-    docs = retriever.invoke(question)
+    docs = retriever.invoke(question) 
 
-    context = "\n\n".join(
-        doc.page_content for doc in docs
-    )
+    context = format_docs_runnable.invoke(docs) 
 
     sources = []
     seen = set()
