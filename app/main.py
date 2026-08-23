@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from app.chat import ask
+from app.chat import ask, ask_structured
 from uuid import UUID
 from fastapi.responses import StreamingResponse
 
@@ -24,4 +24,11 @@ def chat(request: ChatRequest):
     return StreamingResponse(
         result,
         media_type="text/plain"
+    )
+
+@app.post("/chat/structured")
+def chat_structured(request: ChatRequest):
+    return ask_structured(
+        question=request.question,
+        session_id=str(request.session_id)
     )

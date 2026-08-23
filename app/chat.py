@@ -5,6 +5,8 @@ from langchain_core.messages import HumanMessage, AIMessage
 from app.prompts import prompt
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough,RunnableParallel
+from pydantic import BaseModel, Field
+
 
 vector_store = load_vector_store()
 
@@ -14,6 +16,15 @@ llm = ChatGoogleGenerativeAI(
     model = "gemini-2.5-flash"
 )
 
+
+class StructuredChatResponse(BaseModel):
+    answer: str = Field(description="Answer based on FreeClimb docs")
+    sources: list[str] = Field(description="Documentation URLs used")
+
+
+structured_llm = llm.with_structured_output(StructuredChatResponse)
+
+new_chain = prompt | structured_llm
 
 
 # Store conversation history per session so different users
@@ -84,6 +95,43 @@ def ask(question, session_id):
     yield "\n__SOURCES__\n"
     yield "\n".join(sources)
 
+
+
+def ask_structured(question, session_id):
+    if session_id not in histories:
+        histories[session_id] = []
+
+    history = histories[session_id]
+
+    docs = retriever.invoke(question) 
+
+    result = rag_inputs.invoke(question)
+    result["history"] = history 
+
+    response = new_chain.invoke(result)
+
+    sources = []
+    seen = set()
+
+    for doc in docs:
+        url = doc.metadata["source"].replace(".md", "")
+
+        if url not in seen:
+            sources.append(url)
+            seen.add(url)
+
+    response.sources = sources
+
+
+    history.append(
+        HumanMessage(content=question)
+    )    
+
+    history.append(
+        AIMessage(content=response.answer)
+    )
+
+    return response
 
 
 
