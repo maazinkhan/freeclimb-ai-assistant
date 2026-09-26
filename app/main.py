@@ -6,6 +6,16 @@ from fastapi.responses import StreamingResponse
 import logging
 import time
 from fastapi import HTTPException
+import os
+from dotenv import load_dotenv
+from fastapi import Depends, Header
+
+load_dotenv()
+API_KEY = os.getenv("API_KEY")
+def verify_api_key(x_api_key: str | None = Header(default=None)):
+    if not API_KEY or x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
 
 # App-wide log format/level (used by logger.info / logger.exception below)
 logging.basicConfig(
@@ -25,7 +35,7 @@ def root():
     return { "message": "RAG API is running" }
 
 # Streaming: log start only; sources live at end of the stream (__SOURCES__)
-@app.post("/chat")
+@app.post("/chat", dependencies=[Depends(verify_api_key)])
 def chat(request: ChatRequest):
     logger.info(
         "chat request session_id=%s and question=%s",
@@ -53,7 +63,7 @@ def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail="chat failed")
 
 # Non-streaming: log total duration + sources after ask_structured returns
-@app.post("/chat/structured")
+@app.post("/chat/structured", dependencies=[Depends(verify_api_key)])
 def chat_structured(request: ChatRequest):
     logger.info(
         "structured_chat request session_id=%s question=%s",
