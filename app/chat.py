@@ -6,6 +6,14 @@ from app.prompts import prompt
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough,RunnableParallel
 from pydantic import BaseModel, Field
+import logging
+import time
+
+logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 vector_store = load_vector_store()
@@ -103,12 +111,23 @@ def ask_structured(question, session_id):
 
     history = histories[session_id]
 
+    t0 = time.perf_counter()
     docs = retriever.invoke(question) 
 
     result = rag_inputs.invoke(question)
-    result["history"] = history 
+    retrieval_s = time.perf_counter() - t0
 
+    result["history"] = history
+
+    t1 = time.perf_counter()
     response = new_chain.invoke(result)
+    llm_s = time.perf_counter() - t1
+
+    logger.info(
+        "ask_structured retrieval_s=%.3f llm_s=%.3f",
+        retrieval_s,
+              llm_s
+    )
 
     sources = []
     seen = set()
