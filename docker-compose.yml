@@ -1,0 +1,11 @@
+services:
+  api:
+    # Image tag used when Compose builds this service (same idea as docker build -t fcchat-api)
+    image: fcchat-api
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data/chroma:/app/data/chroma
