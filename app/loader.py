@@ -4,11 +4,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-urls = ["https://docs.freeclimb.com/reference/using-the-api"]
-
-def load_documents(urls: list[str]) -> list[Document]:
-
-
-    loader = WebBaseLoader(urls)
-    return loader.load()
+def load_documents(urls: list[str], batch_size: int = 15) -> list[Document]:
+    docs = []
+    for i in range(0, len(urls), batch_size):
+        batch = urls[i : i + batch_size]
+        print(f"Loading URLs {i + 1}–{i + len(batch)} / {len(urls)}")
+        docs.extend(WebBaseLoader(batch).load())
+    return docs
 
