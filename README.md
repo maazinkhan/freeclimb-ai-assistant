@@ -1,6 +1,17 @@
 # FreeClimb AI Assistant
 
-RAG chatbot over FreeClimb documentation: retrieve relevant `.md` docs from ChromaDB, then answer with Gemini via FastAPI (streaming + structured JSON). Streamlit UI optional.
+RAG chatbot over FreeClimb documentation: retrieve relevant `.md` docs from ChromaDB, then answer with Gemini via FastAPI (streaming + structured JSON). Streamlit UI for demos.
+
+## Live demo
+
+**UI:** [FreeClimb AI Assistant on Streamlit](https://freeclimb-ai-assistant.streamlit.app)
+
+**API:** [https://freeclimb-ai-assistant-production.up.railway.app](https://freeclimb-ai-assistant-production.up.railway.app)  
+(`GET /` health check; chat routes require `X-API-Key`)
+
+Architecture: public Streamlit → server-side `API_KEY` → Railway FastAPI (Chroma baked into the image).
+
+---
 
 ## What this solves
 
@@ -8,24 +19,25 @@ FreeClimb’s product surface is a large REST API and docs set — voice, SMS, a
 
 This project turns that documentation into a **question-answering assistant**: you ask in natural language, the app retrieves the most relevant FreeClimb doc chunks, and Gemini answers with citations back to the docs.
 
-Docs are ingested from FreeClimb’s AI-friendly `.md` pages (see their [`llms.txt`](https://docs.freeclimb.com/llms.txt) index), not only the HTML site.
+Docs are ingested from FreeClimb’s AI-friendly `.md` pages (see their [`llms.txt`](https://docs.freeclimb.com/llms.txt) index), not only the HTML site. Coverage today is the **API Reference** corpus in `data/doc_urls.txt`.
 
 ---
 
 ## Features
 
-- RAG over FreeClimb docs (MMR retrieval, source citations)
+- RAG over FreeClimb API docs (MMR retrieval, source citations)
 - Session-based conversation history
 - Streaming `POST /chat` and structured JSON `POST /chat/structured`
 - API key auth (`X-API-Key`)
 - Request logging + retrieval/LLM timing
-- Docker / Compose for the API
+- Docker image with **baked Chroma** (Railway-ready)
+- Streamlit UI (local or Streamlit Community Cloud)
 
 ---
 
 ## Tech stack
 
-Python · LangChain (LCEL) · ChromaDB · Google Gemini · FastAPI · Streamlit · Docker
+Python · LangChain (LCEL) · ChromaDB · Google Gemini · FastAPI · Streamlit · Docker · Railway
 
 ---
 
@@ -42,8 +54,8 @@ Python · LangChain (LCEL) · ChromaDB · Google Gemini · FastAPI · Streamlit 
 ### 1. Clone and enter the project
 
 ```bash
-git clone <your-repo-url>
-cd FCchat
+git clone https://github.com/maazinkhan/freeclimb-ai-assistant.git
+cd freeclimb-ai-assistant
 ```
 
 ### 2. Create a virtualenv and install deps
@@ -65,17 +77,24 @@ USER_AGENT=FCChat/1.0
 ```
 
 - `GOOGLE_API_KEY` — embeddings + Gemini  
-- `API_KEY` — shared secret for FastAPI / Streamlit (`X-API-Key` header)
+- `API_KEY` — shared secret for FastAPI / Streamlit (`X-API-Key` header)  
+- Optional: `API_URL` — FastAPI base URL for Streamlit (defaults to `http://127.0.0.1:8000`)
 
-### 4. Build the vector index
+### 4. Vector index
 
-`data/chroma/` is **not** in git. You must index once (needs network + `GOOGLE_API_KEY`):
+`data/chroma/` is **committed** (prebuilt index for deploy). For local API you can use it as-is.
+
+To rebuild or resume after a rate-limit stop:
 
 ```bash
 python -m app.index
 ```
 
-You should see document/chunk counts and “Vector store created”.
+Default **resumes** (keeps existing chunks). Full wipe + rebuild:
+
+```bash
+FORCE_REINDEX=1 python -m app.index
+```
 
 ### 5. Start the API
 
@@ -96,16 +115,15 @@ In a **second** terminal (venv activated, same `.env`):
 streamlit run streamlit_app.py
 ```
 
-Streamlit calls `http://127.0.0.1:8000/chat` and sends `X-API-Key` automatically.
+Leave `API_URL` unset to talk to local FastAPI. Streamlit reads `API_KEY` from `.env` (or Streamlit secrets in Cloud).
 
 ---
 
-## Run the API with Docker Compose
+## Run the API with Docker
 
-Index **once on the host** first (step 4 above) so `./data/chroma` exists. Compose mounts that folder into the container.
+Chroma is **copied into the image** at build time (same path the app loads: `data/chroma/`).
 
 ```bash
-# from project root; Docker/Rancher must be running
 docker compose up --build
 ```
 
@@ -113,15 +131,23 @@ API: http://127.0.0.1:8000/docs
 
 Stop: `Ctrl+C`, then optionally `docker compose down`.
 
-Equivalent manual run:
+Equivalent:
 
 ```bash
 docker build -t fcchat-api .
-docker run --rm -p 8000:8000 \
-  --env-file .env \
-  -v "$(pwd)/data/chroma:/app/data/chroma" \
-  fcchat-api
+docker run --rm -p 8000:8000 --env-file .env fcchat-api
 ```
+
+---
+
+## Deployed stack
+
+| Piece | Where | Notes |
+|-------|--------|--------|
+| FastAPI + Chroma | [Railway](https://railway.app) | Dockerfile bake; env: `GOOGLE_API_KEY`, `API_KEY` |
+| Streamlit UI | [Streamlit Community Cloud](https://share.streamlit.io) | Secrets: `API_URL` (Railway base URL), `API_KEY` |
+
+Recruiters use the Streamlit URL; they never see the API key.
 
 ---
 
@@ -158,8 +184,10 @@ curl -X POST http://127.0.0.1:8000/chat/structured \
 │   ├── vectorstore.py
 │   ├── loader.py
 │   ├── splitter.py
-│   └── index.py          # Build Chroma index
-├── data/chroma/          # Local vector DB (gitignored — create via index.py)
+│   └── index.py          # Build / resume Chroma index
+├── data/
+│   ├── chroma/           # Vector DB (committed; baked into Docker)
+│   └── doc_urls.txt      # API Reference .md URLs
 ├── streamlit_app.py
 ├── Dockerfile
 ├── docker-compose.yml
@@ -182,15 +210,17 @@ curl -X POST http://127.0.0.1:8000/chat/structured \
 
 | Issue | What to check |
 |-------|----------------|
-| `401 Unauthorized` | `.env` has `API_KEY`; send `X-API-Key` header (not in JSON body) |
-| Empty / weak answers | Run `python -m app.index`; confirm `data/chroma` exists |
+| `401 Unauthorized` | `.env` / Cloud secrets have matching `API_KEY`; send `X-API-Key` header (not in JSON body) |
+| Streamlit Cloud hits `127.0.0.1` | Set secrets `API_URL` + `API_KEY`; reboot the app |
+| Empty / weak answers | Confirm `data/chroma` present; re-run `python -m app.index` if needed |
 | Docker can’t connect | Start Docker Desktop or Rancher Desktop; retry `docker info` |
 | Port 8000 in use | Stop other uvicorn/Compose; or change the host port mapping |
+| Gemini `503` / stream cut off | Temporary model capacity; retry later |
 
 ---
 
 ## Roadmap / next
 
-- Public deploy (Railway / Render / similar)
-- Broader doc index before eval harness
-- Optional: Streamlit in Compose; MLflow later
+- Eval harness + CI (Milestone 4) — **next**
+- Optional: MLflow tracing; hybrid search / reranking
+- Optional: architecture diagram + eval numbers in README after harness
