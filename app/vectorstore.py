@@ -1,20 +1,18 @@
 from langchain_google_genai.embeddings import GoogleGenerativeAIEmbeddings
 from dotenv import load_dotenv
-import os
 import time
 from langchain_chroma import Chroma
 from pathlib import Path
 
 
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 PERSIST_DIRECTORY = str(BASE_DIR / "data" / "chroma")
 EMBEDDING_MODEL = "gemini-embedding-2"
 
-# Free tier: ~100 embed requests/minute — pause between batches to avoid 429
+# Free tier (~100 RPM): 25 chunks + 20s sleep ≈ 75 texts/min
 EMBED_BATCH_SIZE = 25
 EMBED_SLEEP_SECONDS = 20
 
@@ -25,12 +23,12 @@ def get_embedding_model():
     )
 
 
-def create_vectorstore(chunks):
+def create_vectorstore(chunks, resume: bool = True):
     """
-    Build Chroma by embedding chunks in small batches with sleeps.
+    Embed chunks into Chroma in small batches with sleeps.
 
-    from_documents(all_chunks) fires many Gemini embed calls at once and
-    hits free-tier rate limits. We add 25 chunks, wait 20s, repeat.
+    Avoids from_documents(all) which bursts Gemini free-tier limits.
+    With resume=True, skip chunks already in the store (same load/split order).
     """
     embedding = get_embedding_model()
     vector_store = Chroma(
@@ -39,12 +37,27 @@ def create_vectorstore(chunks):
     )
 
     total = len(chunks)
-    for i in range(0, total, EMBED_BATCH_SIZE):
+    start = 0
+    if resume:
+        existing = vector_store._collection.count()
+        if existing:
+            if existing >= total:
+                print(
+                    f"Nothing to do: store already has {existing} "
+                    f"chunks (pipeline produced {total})."
+                )
+                return vector_store
+            print(
+                f"Resuming: {existing} chunks already embedded, "
+                f"skipping those ({total - existing} left)"
+            )
+            start = existing
+
+    for i in range(start, total, EMBED_BATCH_SIZE):
         batch = chunks[i : i + EMBED_BATCH_SIZE]
         print(f"Embedding chunks {i + 1}–{i + len(batch)} / {total}")
         vector_store.add_documents(batch)
 
-        # Don't sleep after the last batch
         if i + EMBED_BATCH_SIZE < total:
             print(
                 f"Sleeping {EMBED_SLEEP_SECONDS}s "
@@ -56,10 +69,7 @@ def create_vectorstore(chunks):
 
 
 def load_vector_store():
-
-    vector_store = Chroma(
+    return Chroma(
         embedding_function=get_embedding_model(),
-        persist_directory=PERSIST_DIRECTORY
+        persist_directory=PERSIST_DIRECTORY,
     )
-
-    return vector_store
