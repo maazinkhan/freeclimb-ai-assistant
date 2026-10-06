@@ -8,7 +8,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app/ ./app/
 
-# Chroma lives on a volume at run time — don't COPY data/chroma here
+COPY data/chroma/ ./data/chroma/
+
 
 EXPOSE 8000
 

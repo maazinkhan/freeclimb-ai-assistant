@@ -3,6 +3,6 @@
 .git
 .idea
 __pycache__
-data
+data/docs
 docs
 *.pyc
