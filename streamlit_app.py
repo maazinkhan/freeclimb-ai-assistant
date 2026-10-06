@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000").rstrip("/")
+
 st.set_page_config(
     page_title="FreeClimb AI Assistant",
     page_icon="📡",
@@ -284,7 +286,7 @@ if ask:
 
     try:
         response = requests.post(
-            "http://127.0.0.1:8000/chat",
+            f"{API_URL}/chat",
             json={
                 "question": question,
                 "session_id": session_id,
