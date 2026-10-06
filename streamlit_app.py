@@ -6,14 +6,24 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_URL = os.getenv("API_URL", "http://127.0.0.1:8000").rstrip("/")
-
 st.set_page_config(
     page_title="FreeClimb AI Assistant",
     page_icon="📡",
     layout="centered",
     initial_sidebar_state="expanded",
 )
+
+
+def _secret(name: str, default: str | None = None) -> str | None:
+    """Streamlit Cloud secrets first, then env / .env for local."""
+    try:
+        return st.secrets[name]
+    except Exception:
+        return os.getenv(name, default)
+
+
+API_URL = (_secret("API_URL", "http://127.0.0.1:8000") or "http://127.0.0.1:8000").rstrip("/")
+API_KEY = _secret("API_KEY")
 
 if "theme" not in st.session_state:
     st.session_state["theme"] = "dark"
@@ -291,7 +301,7 @@ if ask:
                 "question": question,
                 "session_id": session_id,
             },
-            headers={"X-API-Key": os.getenv("API_KEY")},
+            headers={"X-API-Key": API_KEY},
             stream=True,
         )
     except requests.RequestException as e:
@@ -301,7 +311,7 @@ if ask:
 
     if response.status_code == 401:
         progress.update(label="Unauthorized", state="error")
-        st.error("Unauthorized — check API_KEY in your .env")
+        st.error("Unauthorized — check API_KEY in Streamlit secrets or .env")
         st.stop()
 
     if response.status_code != 200:
