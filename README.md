@@ -11,6 +11,10 @@ RAG chatbot over FreeClimb documentation: retrieve relevant `.md` docs from Chro
 
 Architecture: public Streamlit → server-side `API_KEY` → Railway FastAPI (Chroma baked into the image).
 
+## Evaluation
+
+Manual benchmark of the **deployed** app (15 questions, Oct 2026): **87% answer accuracy**, **54% source accuracy**, **85% retrieval relevance** on in-docs questions. Failures cluster on SMS send/limits and extra off-topic citations. Sheet: [`eval/manual_v1.md`](eval/manual_v1.md).
+
 ---
 
 ## What this solves
@@ -221,6 +225,6 @@ curl -X POST http://127.0.0.1:8000/chat/structured \
 
 ## Roadmap / next
 
-- Eval harness + CI (Milestone 4) — **next**
-- Optional: MLflow tracing; hybrid search / reranking
-- Optional: architecture diagram + eval numbers in README after harness
+- Eval harness → **MLflow tracing** → CI (Milestone 4). Manual baseline is in [`eval/manual_v1.md`](eval/manual_v1.md)
+- Optional: hybrid search / reranking
+- Optional: architecture diagram in README after the automated harness
