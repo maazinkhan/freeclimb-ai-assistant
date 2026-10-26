@@ -323,14 +323,24 @@ if ask:
     full_stream = ""
     started = False
 
-    for chunk in response.iter_content(chunk_size=None, decode_unicode=True):
-        if chunk:
-            if not started:
-                progress.update(label="Streaming answer…", state="running")
-                started = True
-            full_stream += chunk
-            if "__SOURCES__" not in full_stream:
-                placeholder.markdown(full_stream)
+    try:
+        for chunk in response.iter_content(chunk_size=None, decode_unicode=True):
+            if chunk:
+                if not started:
+                    progress.update(label="Streaming answer…", state="running")
+                    started = True
+                full_stream += chunk
+                if "__SOURCES__" not in full_stream:
+                    placeholder.markdown(full_stream)
+    except requests.RequestException:
+        progress.update(label="Stream interrupted", state="error")
+        if full_stream and "__SOURCES__" not in full_stream:
+            placeholder.markdown(full_stream)
+        st.error(
+            "The answer stream was interrupted. The model may be overloaded "
+            "or rate-limited. Try again in a moment."
+        )
+        st.stop()
 
     if "__SOURCES__" not in full_stream:
         progress.update(label="Done", state="complete")
