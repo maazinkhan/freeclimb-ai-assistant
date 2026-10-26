@@ -47,14 +47,3 @@ Infrastructure failures (Gemini 503, timeouts): note under **Infra notes**, do n
 **Top failures:** SMS send (Q4) misses `send-a-message` and either omits `to` or falsely refuses. SMS limits (Q13) dump MMS/video docs. Outbound call (Q5) retrieves PerCL `OutDial` next to the HTTP API. Several correct answers still cite extra off-topic URLs (Q1, Q9, Q12), which is why source accuracy lags retrieval.
 
 **Infra notes:** Q8 retry on Streamlit Cloud raised `requests.exceptions.ChunkedEncodingError` (stream ended early; likely Gemini 503/429). Not scored as a RAG failure. UI now catches that error instead of showing a traceback.
-
-## Resume line
-
-> Evaluated the deployed RAG assistant against 15 representative FreeClimb documentation questions, achieving **87%** answer accuracy (source accuracy **54%**, retrieval relevance **85%** on in-docs questions) to identify failure cases.
-
-## How to run
-
-1. Open a fresh browser session on the live app (avoid polluted chat history).
-2. Ask each question in order; mark the three score columns.
-3. If Gemini returns 503, wait and retry that question; log under Infra notes.
-4. Fill Summary and Top failures; then update README Evaluation.
